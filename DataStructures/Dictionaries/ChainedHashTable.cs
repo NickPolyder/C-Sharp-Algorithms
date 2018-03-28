@@ -2,6 +2,11 @@
  * Chained Hash Table.
  * 
  * A hash table that implements the Separate-Chaining scheme for resolving keys-collisions. It also implements auto-resizing (expansion and contraction).
+ *
+ * References:
+ * http://www.algolist.net/Data_structures/Hash_table/Chaining
+ * https://en.wikipedia.org/wiki/Hash_table#Separate_chaining_with_linked_lists
+ *
  */
 
 using System;
