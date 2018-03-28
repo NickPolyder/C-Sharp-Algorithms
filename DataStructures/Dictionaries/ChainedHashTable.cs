@@ -6,7 +6,6 @@
 
 using System;
 using System.Collections.Generic;
-
 using DataStructures.Common;
 using DataStructures.Lists;
 
@@ -30,7 +29,6 @@ namespace DataStructures.Dictionaries
         /// INSTANCE VARIABLES.
         /// </summary>
         private int _size;
-        private int _freeSlotsCount;
         private decimal _slotsLoadFactor;
         private const int _defaultCapacity = 8;
         private DLinkedList<TKey, TValue>[] _hashTableStore;
@@ -57,7 +55,6 @@ namespace DataStructures.Dictionaries
         {
             this._size = 0;
             this._hashTableStore = _emptyArray;
-            this._freeSlotsCount = this._hashTableStore.Length;
             this._keysComparer = EqualityComparer<TKey>.Default;
             this._valuesComparer = EqualityComparer<TValue>.Default;
 
@@ -67,12 +64,10 @@ namespace DataStructures.Dictionaries
 
 
         /// <summary>
-        /// Rehash the the current collection elements to a new collection.
+        /// Rehash the current collection elements to a new collection.
         /// </summary>
         private void _rehash(ref DLinkedList<TKey, TValue>[] newHashTableStore, int oldHashTableSize)
         {
-            // Reset the free slots count
-            this._freeSlotsCount = newHashTableStore.Length;
 
             for (int i = 0; i < oldHashTableSize; ++i)
             {
@@ -88,7 +83,6 @@ namespace DataStructures.Dictionaries
 
                         if (newHashTableStore[hash] == null)
                         {
-                            _freeSlotsCount--;
                             newHashTableStore[hash] = new DLinkedList<TKey, TValue>();
                         }
 
@@ -145,22 +139,16 @@ namespace DataStructures.Dictionaries
                     newCapacity = minCapacity;
 
                 // Try to expand the size
-                try
-                {
-                    DLinkedList<TKey, TValue>[] newHashTableStore = new DLinkedList<TKey, TValue>[newCapacity];
 
-                    // Rehash
-                    if (_size > 0)
-                    {
-                        _rehash(ref newHashTableStore, _hashTableStore.Length);
-                    }//end-if
+                DLinkedList<TKey, TValue>[] newHashTableStore = new DLinkedList<TKey, TValue>[newCapacity];
 
-                    _hashTableStore = newHashTableStore;
-                }
-                catch (OutOfMemoryException)
+                // Rehash
+                if (_size > 0)
                 {
-                    throw;
-                }
+                    _rehash(ref newHashTableStore, _hashTableStore.Length);
+                }//end-if
+
+                _hashTableStore = newHashTableStore;
             }
         }
 
@@ -207,38 +195,6 @@ namespace DataStructures.Dictionaries
         }
 
         /// <summary>
-        /// Hash Function.
-        /// The division method hashing.
-        /// </summary>
-        private uint _divisionMethodHashFunction(TKey key, int length)
-        {
-            uint prehash = 0, hash = INITIAL_HASH;
-
-            if (length < 0)
-                throw new IndexOutOfRangeException();
-
-            if (key is string && key.IsEqualTo(default(TKey)) == false)
-            {
-                var stringKey = Convert.ToString(key);
-
-                for (int i = 0; i < stringKey.Length; ++i)
-                {
-                    hash = (hash ^ stringKey[i]) + ((hash << 26) + (hash >> 6));
-                }
-
-                if (hash > length)
-                    hash = Convert.ToUInt32(hash % length);
-            }
-            else
-            {
-                prehash = _getPreHashOfKey(key);
-                hash = Convert.ToUInt32((37 * prehash) % length);
-            }
-
-            return hash;
-        }
-
-        /// <summary>
         /// Returns an integer that represents the key.
         /// Used in the _hashKey function.
         /// </summary>
@@ -267,26 +223,17 @@ namespace DataStructures.Dictionaries
         /// <summary>
         /// Return count of elements in the hash table.
         /// </summary>
-        public int Count
-        {
-            get { return _size; }
-        }
+        public int Count => _size;
 
         /// <summary>
         /// Checks if the hash table is readonly.
         /// </summary>
-        public bool IsReadOnly
-        {
-            get { return false; }
-        }
+        public bool IsReadOnly => false;
 
         /// <summary>
         /// Checks if the hash table is empty.
         /// </summary>
-        public bool IsEmpty
-        {
-            get { return Count == 0; }
-        }
+        public bool IsEmpty => Count == 0;
 
         /// <summary>
         /// Checks whether key exists in the hash table.
@@ -337,18 +284,12 @@ namespace DataStructures.Dictionaries
         /// <summary>
         /// List of hash table keys.
         /// </summary>
-        public ICollection<TKey> Keys
-        {
-            get { return _keysCollection; }
-        }
+        public ICollection<TKey> Keys => _keysCollection;
 
         /// <summary>
         /// List of hash table values.
         /// </summary>
-        public ICollection<TValue> Values
-        {
-            get { return _valuesCollection; }
-        }
+        public ICollection<TValue> Values => _valuesCollection;
 
 
         /// <summary>
@@ -439,8 +380,6 @@ namespace DataStructures.Dictionaries
                 // This is an empty slot. Initialize the chain of collisions.
                 _hashTableStore[hashcode] = new DLinkedList<TKey, TValue>();
 
-                // Decrease the number of free slots.
-                _freeSlotsCount--;
             }
             else if (_hashTableStore[hashcode] != null && _hashTableStore[hashcode].Count > 0)
             {
@@ -500,9 +439,6 @@ namespace DataStructures.Dictionaries
                             // Nullify the chain of collisions at this slot.
                             _hashTableStore[hashcode] = null;
 
-                            // Increase the number of free slots.
-                            _freeSlotsCount++;
-
                             // Capacity management
                             _ensureCapacity(CapacityManagementMode.Contract);
                         }
@@ -549,9 +485,6 @@ namespace DataStructures.Dictionaries
                             // Nullify the chain of collisions at this slot.
                             _hashTableStore[hashcode] = null;
 
-                            // Increase the number of free slots.
-                            _freeSlotsCount++;
-
                             // Capacity management
                             _ensureCapacity(CapacityManagementMode.Contract);
                         }
@@ -582,17 +515,15 @@ namespace DataStructures.Dictionaries
 
             int i = arrayIndex;
             int hashTableIndex = 0;
-            int countOfElements = (array.Length - arrayIndex);
 
             while (true)
             {
-                KeyValuePair<TKey, TValue> pair;
-
                 if (i >= array.Length)
                     break;
 
                 if (_hashTableStore[hashTableIndex] != null && _hashTableStore[hashTableIndex].Count > 0)
                 {
+                    KeyValuePair<TKey, TValue> pair;
                     if (_hashTableStore[hashTableIndex].Count == 1)
                     {
                         pair = new KeyValuePair<TKey, TValue>(_hashTableStore[hashTableIndex].First.Key, _hashTableStore[hashTableIndex].First.Value);
@@ -635,7 +566,6 @@ namespace DataStructures.Dictionaries
 
             _size = 0;
             _slotsLoadFactor = 0;
-            _freeSlotsCount = _hashTableStore.Length;
         }
 
 
